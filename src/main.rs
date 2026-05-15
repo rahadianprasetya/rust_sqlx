@@ -11,7 +11,16 @@ mod tests {
     use sqlx::{
         Connection, Error, PgConnection, Pool, Postgres, Row,
         postgres::{PgPoolOptions, PgRow},
+        prelude::FromRow,
     };
+
+    #[derive(FromRow, Debug)]
+    #[allow(dead_code)]
+    struct Category {
+        id: String,
+        name: String,
+        description: String,
+    }
 
     #[tokio::test]
     async fn connection_test() -> Result<(), Error> {
@@ -146,6 +155,41 @@ mod tests {
             let name: String = row.get("name");
             let description: String = row.get("description");
             println!("id: {}, name: {}, description: {}", id, name, description);
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn result_mapping_test() -> Result<(), Error> {
+        let pool: Pool<Postgres> = get_pool_once().await.clone();
+
+        let results: Vec<Category> = sqlx::query("select * from category")
+            .map(|row: PgRow| Category {
+                id: row.get("id"),
+                name: row.get("name"),
+                description: row.get("description"),
+            })
+            .fetch_all(&pool)
+            .await?;
+
+        for result in results {
+            println!("{:?}", result);
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn result_map_test() -> Result<(), Error> {
+        let pool: Pool<Postgres> = get_pool_once().await.clone();
+
+        let results: Vec<Category> = sqlx::query_as("select * from category")
+            .fetch_all(&pool)
+            .await?;
+
+        for result in results {
+            println!("{:?}", result);
         }
 
         Ok(())
