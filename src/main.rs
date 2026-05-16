@@ -7,6 +7,7 @@ mod tests {
 
     use std::time::Duration;
 
+    use chrono::{Local, NaiveDateTime};
     use futures::TryStreamExt;
     use sqlx::{
         Connection, Error, PgConnection, Pool, Postgres, Row,
@@ -192,6 +193,100 @@ mod tests {
             println!("{:?}", result);
         }
 
+        Ok(())
+    }
+
+    #[derive(FromRow, Debug)]
+    #[allow(dead_code)]
+    struct Brand {
+        id: String,
+        name: String,
+        description: String,
+        created_at: NaiveDateTime,
+        updated_at: NaiveDateTime,
+    }
+
+    #[tokio::test]
+    async fn insert_brand_test() -> Result<(), Error> {
+        let pool: Pool<Postgres> = get_pool_once().await.clone();
+        sqlx::query("insert into brand(id, name, description, created_at, updated_at) values($1, $2, $3, $4, $5)")
+            .bind("A")
+            .bind("Brand A")
+            .bind("Description Brand A")
+            .bind(Local::now().naive_local())
+            .bind(Local::now().naive_local())
+            .execute(&pool).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn insert_brand_b_test() -> Result<(), Error> {
+        let pool: Pool<Postgres> = get_pool_once().await.clone();
+        sqlx::query("insert into brand(id, name, description, created_at, updated_at) values($1, $2, $3, $4, $5)")
+            .bind("B")
+            .bind("Brand B")
+            .bind("Description Brand B")
+            .bind(Local::now().naive_local())
+            .bind(Local::now().naive_local())
+            .execute(&pool).await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn resultmap_brand_test() -> Result<(), Error> {
+        let pool: Pool<Postgres> = get_pool_once().await.clone();
+
+        let results: Vec<Brand> = sqlx::query_as("select * from brand")
+            .fetch_all(&pool)
+            .await?;
+
+        for result in results {
+            println!("{:?}", result);
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn insert_brand_c_test() -> Result<(), Error> {
+        let pool: Pool<Postgres> = get_pool_once().await.clone();
+        let mut tx = pool.begin().await?;
+        sqlx::query("insert into brand(id, name, description, created_at, updated_at) values($1, $2, $3, $4, $5)")
+            .bind("C")
+            .bind("Brand C")
+            .bind("Description Brand C")
+            .bind(Local::now().naive_local())
+            .bind(Local::now().naive_local())
+            .execute(&mut *tx).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn insert_brand_d_test() -> Result<(), Error> {
+        let pool: Pool<Postgres> = get_pool_once().await.clone();
+
+        let mut tx = pool.begin().await?;
+
+        sqlx::query("insert into brand(id, name, description, created_at, updated_at) values($1, $2, $3, $4, $5)")
+            .bind("D")
+            .bind("Brand D")
+            .bind("Description Brand D")
+            .bind(Local::now().naive_local())
+            .bind(Local::now().naive_local())
+            .execute(&mut *tx).await?;
+
+        sqlx::query("insert into brand(id, name, description, created_at, updated_at) values($1, $2, $3, $4, $5)")
+            .bind("E")
+            .bind("Brand E")
+            .bind("Description Brand E")
+            .bind(Local::now().naive_local())
+            .bind(Local::now().naive_local())
+            .execute(&mut *tx).await?;
+
+        tx.commit().await?;
         Ok(())
     }
 }
